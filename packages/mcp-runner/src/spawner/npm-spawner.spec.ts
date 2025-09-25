@@ -22,7 +22,7 @@ import { NPMSpawner } from './npm-spawner';
 
 test('enabled', async () => {
   const spawner = new NPMSpawner({
-    registry_type: 'npm',
+    registryType: 'npm',
     identifier: 'dummy',
     version: 'fake',
     runtimeArguments: [],

@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "test:unit": "vitest run --passWithNoTests",
     "build:mcp-registry-client": "cd packages/mcp-registry-client &&  pnpm run build",

@@ -1,0 +1,165 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+      branch:
+        description: 'Branch to use for the release'
+        required: true
+        default: main
+env:
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+permissions:
+  contents: read
+
+jobs:
+
+  tag:
+    name: Tagging
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      githubTag: ${{ steps.TAG_UTIL.outputs.githubTag}}
+      apiVersion: ${{ steps.TAG_UTIL.outputs.apiVersion}}
+      releaseId: ${{ steps.create_release.outputs.id}}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - name: Generate tag utilities
+        id: TAG_UTIL
+        run: |
+          TAG_PATTERN=${{ github.event.inputs.version }}
+          echo "githubTag=v$TAG_PATTERN" >> ${GITHUB_OUTPUT}
+          echo "apiVersion=$TAG_PATTERN" >> ${GITHUB_OUTPUT}
+
+      - name: tag
+        run: |
+          git config --local user.name ${{ github.actor }}
+
+          # Add the new version in package.json file
+          sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${{ steps.TAG_UTIL.outputs.apiVersion }}\",#g" package.json
+          git add package.json
+
+
+          # commit the changes
+          git commit -m "chore: 🥁 tagging ${{ steps.TAG_UTIL.outputs.githubTag }} 🥳"
+          echo "Tagging with ${{ steps.TAG_UTIL.outputs.githubTag }}"
+          git tag ${{ steps.TAG_UTIL.outputs.githubTag }}
+          git push origin ${{ steps.TAG_UTIL.outputs.githubTag }}
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1.18.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: ${{ steps.TAG_UTIL.outputs.githubTag }}
+          name: ${{ steps.TAG_UTIL.outputs.githubTag }}
+          draft: true
+          prerelease: true
+      - name: Create the PR to bump the version in the main branch (only if we're tagging from main branch)
+        if: ${{ github.event.inputs.branch == 'main' }}
+        run: |
+          git config --local user.name ${{ github.actor }}
+          CURRENT_VERSION=$(echo "${{ steps.TAG_UTIL.outputs.apiVersion }}")
+          tmp=${CURRENT_VERSION%.*}
+          minor=${tmp#*.}
+          bumpedVersion=${CURRENT_VERSION%%.*}.$((minor + 1)).0
+          bumpedBranchName="bump-to-${bumpedVersion}"
+          git checkout -b "${bumpedBranchName}"
+          sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${bumpedVersion}-next\",#g" package.json
+          git add package.json
+          git commit -s --amend -m "chore: bump version to ${bumpedVersion}"
+          git push origin "${bumpedBranchName}"
+          echo -e "📢 Bump version to ${bumpedVersion}\n\n${{ steps.TAG_UTIL.outputs.apiVersion }} has been released.\n\n Time to switch to the new ${bumpedVersion} version 🥳" > /tmp/pr-title
+          pullRequestUrl=$(gh pr create --title "chore: 📢 Bump version to ${bumpedVersion}" --body-file /tmp/pr-title --head "${bumpedBranchName}" --base "main")
+          echo "📢 Pull request created: ${pullRequestUrl}"
+          echo "➡️ Flag the PR as being ready for review"
+          gh pr ready "${pullRequestUrl}"
+          echo "🔅 Mark the PR as being ok to be merged automatically"
+          gh pr merge "${pullRequestUrl}" --auto --rebase
+        env:
+          GITHUB_TOKEN: ${{ secrets.KORTEX_BOT_TOKEN }}
+
+  build:
+    name: Build
+    needs: tag
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.tag.outputs.githubTag}}
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Execute pnpm
+        run: pnpm install
+
+      - name: Execute pnpm
+        run: pnpm build
+
+  release:
+    needs: [tag, build]
+    name: Release
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: id
+        run: echo the release id is ${{ needs.tag.outputs.releaseId}}
+
+      - name: Publish release
+        uses: StuYarrow/publish-release@01f2a1365bacd77bad861873a7fdf274ab49eefd # v1.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          id: ${{ needs.tag.outputs.releaseId}}
+
+  publish:
+    needs: [tag, release]
+    name: Publish
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Execute pnpm
+        run: pnpm install
+
+      - name: Set-up npmjs auth token
+        run: printf "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}\n" >> ~/.npmrc
+
+      - name: Publish to npmjs
+        run: |
+          echo "Using version ${{ needs.tag.outputs.apiVersion }}"
+          sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${{ needs.tag.outputs.apiVersion }}\",#g" package.json
+          pnpm publish --recursive --provenance --tag latest --no-git-checks --access public

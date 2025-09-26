@@ -15,11 +15,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
-import { components } from "@kortex-hub/mcp-registry-types";
-import { formatInputWithVariables } from "./input-with-variables";
-import {formatArgument} from "/@/utils/arguments";
+import {components} from "@kortex-hub/mcp-registry-types";
+import {formatInputWithVariables} from "./input-with-variables";
 
-export function formatKeyValueInputs(items:  Array<components["schemas"]["KeyValueInput"]> | undefined, values: Record<string, string>): Record<string, string> {
+export function formatKeyValueInputs(items: Array<components["schemas"]["KeyValueInput"]> | undefined, values: Record<string, string>): Record<string, string> {
     if(!items) return {};
 
     return items.reduce((accumulator, current) => {
@@ -38,21 +37,3 @@ export function formatKeyValueInputs(items:  Array<components["schemas"]["KeyVal
     },  {} as  Record<string, string>);
 }
 
-export function formatArguments(items: Array<components["schemas"]["Argument"]> | undefined, values: Record<number, string>): Array<string> {
-    if(!items) return [];
-
-    return items.reduce((accumulator, current, index) => {
-        const value = values[index];
-        if(value) {
-            accumulator.push(value);
-        }  else {
-            const formatted = formatArgument(current);
-            if(formatted) {
-                accumulator.push(formatted);
-            } else if(current.isRequired) {
-                throw new Error(`missing values for argument ${JSON.stringify(current, null, 2)}`);
-            }
-        }
-        return accumulator;
-    }, [] as Array<string>)
-}

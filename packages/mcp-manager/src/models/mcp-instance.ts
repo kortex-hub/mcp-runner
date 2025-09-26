@@ -15,9 +15,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
-import { MCPRemote } from "./remote/mcp-remote";
-import type { MCPRemoteOptions } from "./remote/mcp-remote";
-import type { MCPSpawner } from './spawner/mcp-spawner';
-import { getMCPSpawner } from "./utils/spawner";
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
-export { type MCPSpawner,  type MCPRemoteOptions, getMCPSpawner, MCPRemote, };
+export interface MCPInstance extends AsyncDisposable {
+    /**
+     * {@link import('./base-config').BaseConfig.id}
+     */
+    configId: string;
+    transport: Transport;
+}

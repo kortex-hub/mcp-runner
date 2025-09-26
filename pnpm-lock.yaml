@@ -27,6 +27,34 @@ importers:
         specifier: ^3.0.9
         version: 3.2.4(@types/node@22.18.6)
 
+  packages/mcp-manager:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.18.1
+        version: 1.18.1
+    devDependencies:
+      '@kortex-hub/mcp-registry-client':
+        specifier: workspace:*
+        version: link:../mcp-registry-client
+      '@kortex-hub/mcp-registry-types':
+        specifier: ^1.1.0
+        version: 1.1.0
+      '@kortex-hub/mcp-runner':
+        specifier: workspace:*
+        version: link:../mcp-runner
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+      vite:
+        specifier: ^7.1.3
+        version: 7.1.7(@types/node@22.18.6)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@22.18.6)(rollup@4.52.2)(typescript@5.9.2)(vite@7.1.7(@types/node@22.18.6))
+      vitest:
+        specifier: ^3.0.9
+        version: 3.2.4(@types/node@22.18.6)
+
   packages/mcp-registry-client:
     devDependencies:
       '@kortex-hub/mcp-registry-types':
@@ -51,6 +79,9 @@ importers:
         specifier: ^1.18.1
         version: 1.18.1
     devDependencies:
+      '@kortex-hub/mcp-registry-client':
+        specifier: workspace:*
+        version: link:../mcp-registry-client
       '@kortex-hub/mcp-registry-types':
         specifier: ^1.1.0
         version: 1.1.0

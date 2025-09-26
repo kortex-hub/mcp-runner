@@ -15,9 +15,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
-import { MCPRemote } from "./remote/mcp-remote";
-import type { MCPRemoteOptions } from "./remote/mcp-remote";
-import type { MCPSpawner } from './spawner/mcp-spawner';
-import { getMCPSpawner } from "./utils/spawner";
+import {PackageConfig} from "/@/models/package-config";
+import {RemoteConfig} from "/@/models/remote-config";
 
-export { type MCPSpawner,  type MCPRemoteOptions, getMCPSpawner, MCPRemote, };
+export type MCPConfigurations = PackageConfig | RemoteConfig
+
+export interface Storage {
+    values(): Promise<Array<MCPConfigurations>>;
+    get(configId: string): Promise<MCPConfigurations>;
+    add(config: MCPConfigurations): Promise<void>;
+    delete(id: string): Promise<void>;
+}

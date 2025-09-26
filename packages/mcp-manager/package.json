@@ -1,5 +1,5 @@
 {
-  "name": "@kortex-hub/mcp-runner",
+  "name": "@kortex-hub/mcp-manager",
   "version": "0.0.1",
   "description": "",
   "main": "./dist/index.mjs",
@@ -19,7 +19,7 @@
     "vite-plugin-dts": "^4.5.4",
     "@kortex-hub/mcp-registry-types": "^1.1.0",
     "@kortex-hub/mcp-registry-client": "workspace:*",
-    "ai": "^5.0.11"
+    "@kortex-hub/mcp-runner": "workspace:*"
   },
   "files": [
     "dist"

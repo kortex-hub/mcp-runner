@@ -15,9 +15,19 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
-import { MCPRemote } from "./remote/mcp-remote";
-import type { MCPRemoteOptions } from "./remote/mcp-remote";
-import type { MCPSpawner } from './spawner/mcp-spawner';
-import { getMCPSpawner } from "./utils/spawner";
 
-export { type MCPSpawner,  type MCPRemoteOptions, getMCPSpawner, MCPRemote, };
+export interface BaseConfig {
+    /**
+     * Random UUID generated for storage
+     */
+    id: string;
+    /**
+     * Server related
+     */
+    type: 'remote' | 'package';
+    serverId: string;
+    /**
+     * The semantic version of the server from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.version}
+     */
+    version: string;
+}

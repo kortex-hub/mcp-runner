@@ -32,21 +32,19 @@ export default defineConfig({
             '/@/': join(PACKAGE_ROOT, 'src') + '/',
         },
     },
-    plugins: [dts()],
-    base: '',
-    server: {
-        fs: {
-            strict: true,
-        },
-    },
+    plugins: [dts({
+        exclude: ['tests/**/*', 'src/**/*.{test,spec}.ts']
+    })],
     build: {
         target: 'esnext',
-        sourcemap: true,
+        sourcemap: 'inline',
         outDir: 'dist',
         assetsDir: '.',
+        minify: process.env.MODE === 'production' ? 'esbuild' : false,
         lib: {
+            fileName: 'index',
             entry: 'src/index.ts',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         rollupOptions: {
             external: builtinModules.flatMap(p => [p, `node:${p}`]),

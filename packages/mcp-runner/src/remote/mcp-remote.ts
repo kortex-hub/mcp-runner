@@ -19,9 +19,9 @@ import type {components} from "@kortex-hub/mcp-registry-types";
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import {formatInputWithVariables} from "/@/utils/input-with-variables";
+import { formatInputWithVariables } from "/@/utils/input-with-variables";
 
-interface MCPRemoteOptions {
+export interface MCPRemoteOptions {
     fetch?: typeof fetch;
 }
 

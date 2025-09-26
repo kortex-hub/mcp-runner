@@ -45,24 +45,8 @@ test(
             registryType: 'npm',
             identifier: '@modelcontextprotocol/server-filesystem',
             version: '2025.8.21',
-            runtimeArguments: [
-                {
-                    name: '--yes',
-                    type: 'named',
-                    format: 'boolean',
-                    default: 'true',
-                    isRequired: true,
-                    isSecret: false,
-                },
-            ],
-            packageArguments: [
-                {
-                    isRequired: true,
-                    value: tmp,
-                    isSecret: false,
-                    format: 'filepath',
-                },
-            ],
+            runtimeArguments: ['--yes'],
+            packageArguments: [tmp],
         });
         const transport = await npmSpawner.spawn();
 

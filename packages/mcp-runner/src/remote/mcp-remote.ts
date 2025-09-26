@@ -19,34 +19,47 @@ import type {components} from "@kortex-hub/mcp-registry-types";
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { formatInputWithVariables } from "/@/utils/input-with-variables";
 
 export interface MCPRemoteOptions {
     fetch?: typeof fetch;
 }
 
-export class MCPRemote {
+export type ResolvedServerRemote = Omit<components['schemas']['Remote'], 'headers'> & {
+    headers?: Record<string, string>,
+};
+
+export class MCPRemote implements AsyncDisposable {
+    #transport: Transport | undefined;
+
     constructor(
-        protected readonly remote: components['schemas']['Remote'],
+        protected readonly remote: ResolvedServerRemote,
         protected readonly options?: MCPRemoteOptions,
     ) {}
 
     public async connect(): Promise<Transport> {
         const requestInit: RequestInit = {
-            headers: Object.fromEntries((this.remote.headers ?? []).map((header) => ([header.name, formatInputWithVariables(header)]))),
+            headers: this.remote.headers,
         }
 
         switch (this.remote.type) {
             case "streamable-http":
-                return new StreamableHTTPClientTransport(new URL(this.remote.url), {
+                this.#transport = new StreamableHTTPClientTransport(new URL(this.remote.url), {
                     requestInit: requestInit,
                     fetch: this.options?.fetch,
                 });
+                break;
             case "sse":
-                return new SSEClientTransport(new URL(this.remote.url), {
+                this.#transport  = new SSEClientTransport(new URL(this.remote.url), {
                     requestInit: requestInit,
                     fetch: this.options?.fetch,
                 });
+                break;
         }
+
+        return this.#transport;
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        await this.#transport?.close();
     }
 }

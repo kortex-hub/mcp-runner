@@ -17,10 +17,10 @@
  ***********************************************************************/
 import type { components } from "@kortex-hub/mcp-registry-types";
 
-export function formatInputWithVariables(input: components['schemas']['InputWithVariables']): string {
+export function formatInputWithVariables(input: components['schemas']['InputWithVariables']): string | undefined {
     let template = input.value ?? input.default;
     if (!template) {
-        throw new Error('cannot format value: value and default are undefined');
+        return undefined;
     }
 
     for (const [key, content] of Object.entries(input.variables ?? {})) {

@@ -101,4 +101,6 @@ describe('getServer', () => {
         await client.getServer(parameters);
         expect(FETCH_MOCK).toHaveBeenCalledWith(expectedURL);
     });
-})
+});
+
+

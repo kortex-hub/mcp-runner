@@ -17,42 +17,18 @@
  ***********************************************************************/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { components } from '@kortex-hub/mcp-registry-types';
-import {formatInputWithVariables} from "/@/utils/input-with-variables";
+
+export type ResolvedServerPackage = Omit<components['schemas']['Package'], 'packageArguments' | 'runtimeArguments' | 'environmentVariables'> & {
+    runtimeArguments?: Array<string>;
+    packageArguments?: Array<string>;
+    environmentVariables?: Record<string, string>;
+}
 
 export abstract class MCPSpawner<T extends string = string> implements AsyncDisposable {
-    constructor(protected readonly pack: components['schemas']['Package'] & { registryType: T }) {}
+    constructor(protected readonly pack: ResolvedServerPackage & { registryType: T }) {}
 
     abstract spawn(): Promise<Transport>;
     abstract [Symbol.asyncDispose](): PromiseLike<void>;
     abstract enabled(): Promise<boolean>;
-
-    protected getArgument(
-        argument: components['schemas']['PositionalArgument'] | components['schemas']['NamedArgument'],
-    ): string {
-        const value = argument.value ?? argument.default;
-
-        if (argument.isRequired && !value) {
-            throw new Error(
-                `argument '${argument.description}' does not have a default value: user input is not yet supported`,
-            );
-        }
-
-        // dealing with named argument
-        if ('type' in argument && argument['type'] === 'named') {
-            return `${argument.name}=${value}`;
-        } else {
-            return `${value}`;
-        }
-    }
-
-    protected getEnvironments(): Record<string, string> {
-        return (this.pack.environmentVariables ?? []).reduce(
-            (accumulator, current) => {
-                accumulator[current.name] = formatInputWithVariables(current);
-                return accumulator;
-            },
-            {} as Record<string, string>,
-        );
-    }
 }
 

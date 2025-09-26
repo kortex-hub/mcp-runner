@@ -33,19 +33,15 @@ export class NPMSpawner extends MCPSpawner<'npm'> {
       console.warn('specified file sha256 is not supported with npx spawner');
     }
 
-    // build arguments
-    const RUNTIME_ARGS: Array<string> = (this.pack.runtimeArguments ?? []).map(this.getArgument.bind(this));
-    const PACKAGE_ARGS: Array<string> = (this.pack.packageArguments ?? []).map(this.getArgument.bind(this));
-
     const transport = new StdioClientTransport({
       command: NPX_COMMAND,
       args: [
-        ...RUNTIME_ARGS,
+        ...(this.pack.runtimeArguments ?? []),
         // let's use package@version if version is specified
         this.pack.version ? `${this.pack.identifier}@${this.pack.version}` : this.pack.identifier,
-        ...PACKAGE_ARGS,
+        ...(this.pack.packageArguments ?? []),
       ],
-      env: this.getEnvironments(),
+      env: this.pack.environmentVariables,
     });
     this.#disposables.push({
       [Symbol.asyncDispose]: () => {

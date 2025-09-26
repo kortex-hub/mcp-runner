@@ -15,10 +15,22 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
-import { BaseConfig } from "/@/models/base-config";
 
-export interface RemoteConfig extends BaseConfig {
-    type: 'remote';
-    remoteId: number;
-    headers: Record<string, string>;
+import { components } from "@kortex-hub/mcp-registry-types";
+import {formatInputWithVariables} from "/@/utils/input-with-variables";
+
+export function formatArgument(
+    argument: components['schemas']['PositionalArgument'] | components['schemas']['NamedArgument'],
+): string | undefined {
+    const resolved = formatInputWithVariables(argument);
+    if(!resolved) return undefined;
+
+    // dealing with named argument
+    if ('type' in argument && argument['type'] === 'named') {
+        return `${argument.name}=${resolved}`;
+    } else {
+        return resolved;
+    }
 }
+
+type patate = (components["schemas"]["InputWithVariables"] & { value: string}) |(components["schemas"]["InputWithVariables"] & { valueHint: string })

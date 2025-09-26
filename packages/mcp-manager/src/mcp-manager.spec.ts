@@ -19,10 +19,10 @@
 import { expect, test, vi, describe, beforeEach } from "vitest";
 import {MCPManager, type VersionedServerDetail} from "/@/mcp-manager";
 import type { Storage } from "/@/models/storage";
-import { MCPRemote, getMCPSpawner } from "@kortex-hub/mcp-runner";
-import type {MCPSpawner} from "@kortex-hub/mcp-runner";
+import { MCPRemote, MCPPackage } from "@kortex-hub/mcp-runner";
 import {Transport} from "@modelcontextprotocol/sdk/shared/transport.js";
 import type {MCPRegistryClient} from "@kortex-hub/mcp-registry-client";
+import {components} from "@kortex-hub/mcp-registry-types";
 
 // mock runner
 vi.mock('@kortex-hub/mcp-runner');
@@ -52,12 +52,19 @@ const SERVER_DETAILS: VersionedServerDetail = {
     }],
     packages: [{
         runtimeArguments: [{
-            name: 'foo-runtime',
+            type: 'named',
+            name: '--foo-runtime',
             value: 'bar-runtime',
             format: 'string',
             isSecret: false,
             isRequired: false,
-        }],
+        },
+            {
+                value: 'bar-runtime-positional',
+                format: 'string',
+                isSecret: false,
+                isRequired: false,
+            }],
         packageArguments: [{
             name: 'foo-package',
             value: 'bar-package',
@@ -87,12 +94,6 @@ const SERVER_DETAILS: VersionedServerDetail = {
     }
 }
 
-const MCP_SPAWNER_MOCK: MCPSpawner = {
-    enabled: vi.fn(),
-    spawn: vi.fn(),
-    [Symbol.asyncDispose]: vi.fn()
-} as unknown as MCPSpawner;
-
 const MCP_TRANSPORT: Transport = {
     close: vi.fn(),
     start: vi.fn(),
@@ -107,7 +108,6 @@ const MCP_REGISTRY_CLIENT_MOCK: MCPRegistryClient = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getMCPSpawner).mockReturnValue(MCP_SPAWNER_MOCK);
 
     // mock Transport
     vi.mocked(MCP_TRANSPORT.close).mockResolvedValue(undefined);
@@ -116,8 +116,8 @@ beforeEach(() => {
     vi.mocked(MCPRemote.prototype.connect).mockResolvedValue(MCP_TRANSPORT);
 
     // mock MCP Spawner
-    vi.mocked(MCP_SPAWNER_MOCK.enabled).mockResolvedValue(true);
-    vi.mocked(MCP_SPAWNER_MOCK.spawn).mockResolvedValue(MCP_TRANSPORT);
+    vi.mocked(MCPPackage.prototype.enabled).mockResolvedValue(true);
+    vi.mocked(MCPPackage.prototype.spawn).mockResolvedValue(MCP_TRANSPORT);
 
     // mock storage
     vi.mocked(STORAGE_MOCK.get).mockResolvedValue({
@@ -226,7 +226,12 @@ describe('MCPManager#registerRemote', () => {
         await manager.registerRemote(SERVER_DETAILS, 0, {});
 
         expect(MCPRemote).toHaveBeenCalledOnce();
-        expect(MCPRemote).toHaveBeenCalledWith(SERVER_DETAILS.remotes?.[0], {
+        expect(MCPRemote).toHaveBeenCalledWith({
+            ...SERVER_DETAILS.remotes?.[0],
+            headers: {
+                'FOO': 'bar',
+            },
+        }, {
             client: MCP_REGISTRY_CLIENT_MOCK,
         });
     });
@@ -241,12 +246,11 @@ describe('MCPManager#registerRemote', () => {
             'FOO': 'baz'
         });
         expect(MCPRemote).toHaveBeenCalledWith(expect.objectContaining({
-            headers:  expect.arrayContaining([expect.objectContaining(
+            headers: expect.objectContaining(
                 {
-                    name: 'FOO',
-                    value: 'baz',
+                    'FOO': 'baz',
                 }
-            )])
+            )
         }), {
             client: MCP_REGISTRY_CLIENT_MOCK,
         });
@@ -284,19 +288,19 @@ describe('MCPManager#stop', () => {
     test('expect stop package instance to properly cleanup', async () => {
         const instance = await manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
         expect(manager.all()).toHaveLength(1);
-        expect(MCP_SPAWNER_MOCK[Symbol.asyncDispose]).not.toHaveBeenCalled();
+        expect(MCPPackage.prototype[Symbol.asyncDispose]).not.toHaveBeenCalled();
         expect(MCP_TRANSPORT.close).not.toHaveBeenCalled();
 
         await manager.stop(instance.configId);
         expect(manager.all()).toHaveLength(0);
 
         // cleanup
-        expect(MCP_SPAWNER_MOCK[Symbol.asyncDispose]).toHaveBeenCalledOnce();
+        expect(MCPPackage.prototype[Symbol.asyncDispose]).toHaveBeenCalledOnce();
         expect(MCP_TRANSPORT.close).toHaveBeenCalledOnce();
     });
 });
 
-describe('registerPackage', () => {
+describe('MCPManager#registerPackage', () => {
     let manager: MCPManager;
     beforeEach(() => {
         manager = new MCPManager(STORAGE_MOCK, {
@@ -322,12 +326,24 @@ describe('registerPackage', () => {
     test('expect getMCPSpawner to have been called with appropriate arguments', async () => {
         await manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
 
-        expect(getMCPSpawner).toHaveBeenCalledOnce();
-        expect(getMCPSpawner).toHaveBeenCalledWith(SERVER_DETAILS.packages?.[0]);
+        expect(MCPPackage).toHaveBeenCalledOnce();
+        expect(MCPPackage).toHaveBeenCalledWith({
+            ...SERVER_DETAILS.packages?.[0],
+            runtimeArguments: [
+                '--foo-runtime=bar-runtime',
+                'bar-runtime-positional',
+            ],
+            packageArguments: [
+                'bar-package'
+            ],
+            environmentVariables: {
+                'foo-env': 'bar-env',
+            },
+        });
     });
 
     test('expect error when MCPSpawner is not enabled', async () => {
-        vi.mocked(MCP_SPAWNER_MOCK.enabled).mockResolvedValue(false);
+        vi.mocked(MCPPackage.prototype.enabled).mockResolvedValue(false);
 
         await expect(() => {
             return manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
@@ -370,7 +386,7 @@ describe('start', () => {
     test('should should return appropriate MCP instance', async () => {
         await manager.start('foo-bar');
 
-        expect(getMCPSpawner).not.toHaveBeenCalled();
+        expect(MCPPackage).not.toHaveBeenCalled();
         expect(MCPRemote).toHaveBeenCalledOnce();
     });
 

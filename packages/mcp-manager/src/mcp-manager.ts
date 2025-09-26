@@ -19,12 +19,13 @@ import {Storage} from "/@/models/storage";
 import {MCPInstance} from "/@/models/mcp-instance";
 import type { components } from '@kortex-hub/mcp-registry-types';
 import { randomUUID } from 'node:crypto';
-import { MCPRemote, getMCPSpawner } from '@kortex-hub/mcp-runner';
+import { MCPRemote, MCPPackage } from '@kortex-hub/mcp-runner';
 import type  { MCPRemoteOptions } from "@kortex-hub/mcp-runner";
 import { MCPRegistryClient } from "@kortex-hub/mcp-registry-client";
 import {RemoteConfig} from "/@/models/remote-config";
 import {PackageConfig} from "/@/models/package-config";
 import { EventEmitter } from 'node:events';
+import {formatArguments, formatKeyValueInputs} from "/@/utils/server-details-resolver";
 
 export type VersionedServerDetail = components['schemas']['ServerDetail'] & {
     _meta: {
@@ -166,17 +167,8 @@ export class MCPManager implements AsyncDisposable {
 
         const connector = new MCPRemote({
             ...server.remotes?.[config.remoteId],
-            headers: server.remotes?.[config.remoteId].headers?.map((header) => {
-                // if the user provided a header, we want to override it
-                if(config.headers[header.name]) {
-                    return {
-                        ...header,
-                        value: config.headers[header.name],
-                        variables: {},
-                    }
-                }
-                return header;
-            }),
+            // resolve headers with config values and server values
+            headers: formatKeyValueInputs(server.remotes?.[config.remoteId].headers, config.headers),
         }, this.options);
         const transport = await connector.connect();
 
@@ -203,38 +195,13 @@ export class MCPManager implements AsyncDisposable {
         if(!server._meta?.["io.modelcontextprotocol.registry/official"]) throw new Error('missing "io.modelcontextprotocol.registry/official" metadata on server details');
         if(!server.packages?.[config.packageId]) throw new Error('invalid index for package');
 
-        const spawner = getMCPSpawner({
+        const spawner = new MCPPackage({
             ...server.packages?.[config.packageId],
-            // if the user provided runtime arguments, we want to override it
-            runtimeArguments: server.packages?.[config.packageId]?.runtimeArguments?.map((argument, index) => {
-                if(config.runtimeArguments[index]) {
-                    return {
-                        ...argument,
-                        value: config.runtimeArguments[index]
-                    };
-                }
-                return argument;
-            }),
+            runtimeArguments: formatArguments(server.packages?.[config.packageId]?.runtimeArguments, config.runtimeArguments),
             // if the user provided package arguments, we want to override it
-            packageArguments: server.packages?.[config.packageId]?.packageArguments?.map((argument, index) => {
-                if(config.packageArguments[index]) {
-                    return {
-                        ...argument,
-                        value: config.packageArguments[index]
-                    };
-                }
-                return argument;
-            }),
+            packageArguments: formatArguments(server.packages?.[config.packageId]?.packageArguments, config.packageArguments),
             // if the user provided environment variables, we want to override it
-            environmentVariables: server.packages?.[config.packageId]?.environmentVariables?.map((env, index) => {
-                if(config.environmentVariables[index]) {
-                    return {
-                        ...env,
-                        value: config.environmentVariables[index]
-                    };
-                }
-                return env;
-            }),
+            environmentVariables: formatKeyValueInputs(server.packages?.[config.packageId]?.environmentVariables, config.environmentVariables),
         });
 
         // ensure the spawner is enabled

@@ -30,8 +30,8 @@ importers:
   packages/mcp-manager:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.18.1
-        version: 1.18.1
+        specifier: ^1.18.2
+        version: 1.18.2
     devDependencies:
       '@kortex-hub/mcp-registry-client':
         specifier: workspace:*
@@ -76,8 +76,8 @@ importers:
   packages/mcp-runner:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.18.1
-        version: 1.18.1
+        specifier: ^1.18.2
+        version: 1.18.2
     devDependencies:
       '@kortex-hub/mcp-registry-client':
         specifier: workspace:*
@@ -345,8 +345,8 @@ packages:
   '@microsoft/tsdoc@0.15.1':
     resolution: {integrity: sha512-4aErSrCR/On/e5G2hDP0wjooqDdauzEbIq8hIkIe5pXV0rtWJZvdCEKL0ykZxex+IxIwBp0eGeV48hQN07dXtw==}
 
-  '@modelcontextprotocol/sdk@1.18.1':
-    resolution: {integrity: sha512-d//GE8/Yh7aC3e7p+kZG8JqqEAwwDUmAfvH1quogtbk+ksS6E0RR6toKKESPYYZVre0meqkJb27zb+dhqE9Sgw==}
+  '@modelcontextprotocol/sdk@1.18.2':
+    resolution: {integrity: sha512-beedclIvFcCnPrYgHsylqiYJVJ/CI47Vyc4tY8no1/Li/O8U4BTlJfy6ZwxkYwx+Mx10nrgwSVrA7VBbhh4slg==}
     engines: {node: '>=18'}
 
   '@opentelemetry/api@1.9.0':
@@ -1658,7 +1658,7 @@ snapshots:
 
   '@microsoft/tsdoc@0.15.1': {}
 
-  '@modelcontextprotocol/sdk@1.18.1':
+  '@modelcontextprotocol/sdk@1.18.2':
     dependencies:
       ajv: 6.12.6
       content-type: 1.0.5

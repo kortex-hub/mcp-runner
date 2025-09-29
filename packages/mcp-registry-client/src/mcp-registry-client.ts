@@ -16,6 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 import type { components, paths} from '@kortex-hub/mcp-registry-types';
+import { join as joinposix } from 'node:path/posix'
 
 export interface MCPRegistryClientOptions {
     baseURL?: string;
@@ -48,7 +49,12 @@ export class MCPRegistryClient {
                 template = template.replace(`{${key}}`, String(value));
             });
         }
-        url.pathname = template;
+
+        if(url.pathname) {
+            url.pathname = joinposix(url.pathname, template);
+        } else {
+            url.pathname = template;
+        }
 
         if(options.queries) {
             url.search = new URLSearchParams(
@@ -59,25 +65,29 @@ export class MCPRegistryClient {
         return url.toString();
     }
 
+    protected filterUndefined(record: Record<string, unknown>): Record<string, unknown> {
+        return Object.fromEntries(Object.entries(record).filter(([_, value]) => value !== undefined));
+    }
+
     public async getServers(parameters?: paths['/v0/servers']['get']['parameters']): Promise<components['schemas']['ServerList']> {
-        const response = await this.#fetch(
-            this.getURL('/v0/servers', {
-                queries: parameters?.query,
-            }),
-        );
-        if(!response.ok) throw new Error(`Failed to fetch servers: ${response.statusText}`);
+        const resolvedURL = this.getURL('/v0/servers', {
+            queries: parameters?.query ? this.filterUndefined(parameters.query) : undefined,
+        });
+        const response = await this.#fetch(resolvedURL);
+        if(!response.ok) throw new Error(`Failed to fetch servers for registry ${this.#baseURL}: ${response.statusText} - (URL: ${resolvedURL})`);
         const body = await response.json()
         return body as components['schemas']['ServerList'];
     }
 
     public async getServer(parameters: paths['/v0/servers/{server_id}']['get']['parameters']): Promise<components['schemas']['ServerDetail']> {
+        const resolvedURL = this.getURL('/v0/servers/{server_id}', {
+            queries: parameters.query ? this.filterUndefined(parameters.query) : undefined,
+            paths: parameters.path ? this.filterUndefined(parameters.path) : undefined,
+        });
         const response = await this.#fetch(
-            this.getURL('/v0/servers/{server_id}', {
-                queries: parameters.query,
-                paths: parameters.path,
-            }),
+            resolvedURL,
         );
-        if(!response.ok) throw new Error(`Failed to fetch server details: ${response.statusText}`);
+        if(!response.ok) throw new Error(`Failed to fetch server details for registry ${this.#baseURL}: ${response.statusText} - (URL: ${resolvedURL})`);
         const body = await response.json()
         return body as components['schemas']['ServerDetail'];
     }
@@ -85,11 +95,11 @@ export class MCPRegistryClient {
     public async getServerVersions(parameters: paths['/v0/servers/{server_id}']['get']['parameters']): Promise<components['schemas']['ServerList']> {
         const response = await this.#fetch(
             this.getURL('/v0/servers/{server_id}', {
-                queries: parameters.query,
-                paths: parameters.path,
+                queries: parameters.query ? this.filterUndefined(parameters.query) : undefined,
+                paths: parameters.path ? this.filterUndefined(parameters.path) : undefined,
             }),
         );
-        if(!response.ok) throw new Error(`Failed to fetch server versions: ${response.statusText}`);
+        if(!response.ok) throw new Error(`Failed to fetch server versions for registry ${this.#baseURL}: ${response.statusText}`);
         const body = await response.json()
         return body as components['schemas']['ServerList'];
     }

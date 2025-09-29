@@ -46,6 +46,18 @@ export type MCPManagerOptions = MCPRemoteOptions & {
 
 const UPDATE_EVENT = 'mcp-manager-update';
 
+export interface MCPStartEvent {
+    type: 'start';
+    instance: MCPInstance;
+}
+
+export interface MCPStopEvent {
+    type: 'stop';
+    configId: string;
+}
+
+export type MCPManagerEvent = MCPStartEvent | MCPStopEvent;
+
 export class MCPManager implements AsyncDisposable {
     #client: MCPRegistryClient;
     #instances: Map<string, MCPInstance> = new Map();
@@ -55,7 +67,7 @@ export class MCPManager implements AsyncDisposable {
         this.#client = options?.client ?? new MCPRegistryClient();
     }
 
-    public onUpdate(listener: () => void): Disposable {
+    public onUpdate(listener: (event: MCPManagerEvent) => void): Disposable {
         this.#event.on(UPDATE_EVENT, listener);
         return {
             [Symbol.dispose]: () => {
@@ -64,8 +76,8 @@ export class MCPManager implements AsyncDisposable {
         }
     }
 
-    protected notify(): void {
-        this.#event.emit(UPDATE_EVENT);
+    protected notify(event: MCPManagerEvent): void {
+        this.#event.emit(UPDATE_EVENT, event);
     }
 
     public async start(configId: string): Promise<MCPInstance> {
@@ -156,7 +168,10 @@ export class MCPManager implements AsyncDisposable {
         try {
             return this.#instances.get(configId)?.[Symbol.asyncDispose]();
         } finally {
-            this.notify();
+            this.notify({
+                type: 'stop',
+                configId: configId,
+            });
         }
     }
 
@@ -184,7 +199,10 @@ export class MCPManager implements AsyncDisposable {
 
         // update instance store
         this.#instances.set(config.id, instance);
-        this.notify();
+        this.notify({
+            type: 'start',
+            instance,
+        });
 
         return instance;
     }
@@ -225,7 +243,10 @@ export class MCPManager implements AsyncDisposable {
         }
         // update instance store
         this.#instances.set(config.id, instance);
-        this.notify();
+        this.notify({
+            type: 'start',
+            instance,
+        });
 
         return instance;
     }

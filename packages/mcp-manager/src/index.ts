@@ -16,8 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
-import { MCPManager } from './mcp-manager';
+import { MCPManager, type MCPManagerEvent } from './mcp-manager';
+import { MCPInstance } from "./models/mcp-instance";
+import type { Storage, MCPConfigurations } from './models/storage';
 
 export {
-    MCPManager
+    MCPManager,
+    type MCPInstance,
+    type Storage,
+    type MCPConfigurations,
+    type MCPManagerEvent,
 };

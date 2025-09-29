@@ -30,4 +30,8 @@ export interface BaseConfig {
      * The semantic version of the server from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.version}
      */
     version: string;
+    /**
+     * Server name from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.name}
+     */
+    name: string;
 }

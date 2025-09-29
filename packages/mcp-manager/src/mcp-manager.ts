@@ -126,6 +126,7 @@ export class MCPManager implements AsyncDisposable {
             type: 'remote',
             remoteId: remoteId,
             headers: headers,
+            name: server.name,
         };
 
         const instance = await this.startRemote(server, config);
@@ -155,6 +156,7 @@ export class MCPManager implements AsyncDisposable {
             runtimeArguments: runtimeArguments,
             packageArguments: packageArguments,
             environmentVariables: environmentVariables,
+            name: server.name,
         };
 
         const instance = await this.startPackage(server, config);

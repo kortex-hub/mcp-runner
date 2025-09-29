@@ -164,6 +164,11 @@ export class MCPManager implements AsyncDisposable {
         return instance;
     }
 
+    public async unregister(configId: string): Promise<void> {
+        await this.storage.delete(configId);
+        await this.stop(configId);
+    }
+
     public async stop(configId: string): Promise<void> {
         try {
             return this.#instances.get(configId)?.[Symbol.asyncDispose]();

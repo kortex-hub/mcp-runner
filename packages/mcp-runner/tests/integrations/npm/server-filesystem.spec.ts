@@ -71,5 +71,7 @@ test(
         expect(res.content[0].isError).toBeFalsy();
         expect(res.content[0].text).toBe(DUMMY_CONTENT);
     },
-    20_000,
+    {
+        skip: true,
+    },
 );

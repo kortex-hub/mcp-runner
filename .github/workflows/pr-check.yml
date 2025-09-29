@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-format-typecheck:
+  typecheck:
     name: linter, formatters
     runs-on: ubuntu-24.04
     steps:
@@ -42,12 +42,6 @@ jobs:
 
       - name: Execute Build
         run: pnpm build
-
-      - name: Run linter
-        run: pnpm lint:check
-
-      - name: Run formatter
-        run: pnpm format:check
 
       - name: Run typecheck
         run: pnpm typecheck

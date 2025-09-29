@@ -25,7 +25,7 @@ import { MCPRegistryClient } from "@kortex-hub/mcp-registry-client";
 import {RemoteConfig} from "/@/models/remote-config";
 import {PackageConfig} from "/@/models/package-config";
 import { EventEmitter } from 'node:events';
-import {formatKeyValueInputs} from "/packages/mcp-manager/src/utils/format-key-value-inputs";
+import {formatKeyValueInputs} from "/@/utils/format-key-value-inputs";
 import {formatArguments} from "/@/utils/arguments";
 
 export type VersionedServerDetail = components['schemas']['ServerDetail'] & {

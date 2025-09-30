@@ -25,9 +25,20 @@ export interface BaseConfig {
      * Server related
      */
     type: 'remote' | 'package';
+    /**
+     * The server identifier from {@link import('@kortex-hub/mcp-registry-types').components.schemas.ServerDetail._meta["io.modelcontextprotocol.registry/official"].serverId}
+     */
     serverId: string;
     /**
      * The semantic version of the server from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.version}
      */
     version: string;
+    /**
+     * Server name from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.name}
+     */
+    name: string;
+    /**
+     * Specify the registry URL to use for this server.
+     */
+    registryURL: string;
 }

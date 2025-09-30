@@ -22,7 +22,7 @@ import type { Storage } from "/@/models/storage";
 import { MCPRemote, MCPPackage } from "@kortex-hub/mcp-runner";
 import {Transport} from "@modelcontextprotocol/sdk/shared/transport.js";
 import type {MCPRegistryClient} from "@kortex-hub/mcp-registry-client";
-import {components} from "@kortex-hub/mcp-registry-types";
+import {MCPRegistriesClients} from "/@/models/mcp-registries-clients";
 
 // mock runner
 vi.mock('@kortex-hub/mcp-runner');
@@ -100,11 +100,17 @@ const MCP_TRANSPORT: Transport = {
     send: vi.fn()
 }
 
+const MCP_REGISTRIES_CLIENTS_MOCK: MCPRegistriesClients = {
+    getClient: vi.fn(),
+}
+
 const MCP_REGISTRY_CLIENT_MOCK: MCPRegistryClient = {
     getServers: vi.fn(),
     getServer: vi.fn(),
     getServerVersions: vi.fn(),
 } as unknown as MCPRegistryClient;
+
+const REGISTRY_URL_MOCK = 'https://foo.bar';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -122,6 +128,8 @@ beforeEach(() => {
     // mock storage
     vi.mocked(STORAGE_MOCK.get).mockResolvedValue({
         type: 'remote',
+        name: 'foo-bar',
+        registryURL: REGISTRY_URL_MOCK,
         remoteId: 0,
         serverId: SERVER_DETAILS._meta["io.modelcontextprotocol.registry/official"].serverId,
         version: SERVER_DETAILS.version,
@@ -130,31 +138,31 @@ beforeEach(() => {
     });
 
     // mock MCP Registry client
+    vi.mocked(MCP_REGISTRIES_CLIENTS_MOCK.getClient).mockReturnValue(MCP_REGISTRY_CLIENT_MOCK);
     vi.mocked(MCP_REGISTRY_CLIENT_MOCK.getServer).mockResolvedValue(SERVER_DETAILS);
 });
 
 test('MCPManager should not have any instance after constructor', () => {
-    const manager = new MCPManager(STORAGE_MOCK, {
-        client: MCP_REGISTRY_CLIENT_MOCK,
-    });
+    const manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     expect(manager.all()).toHaveLength(0);
 });
 
 describe('MCPManager#onUpdate', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
     test('listener should be called on registerRemote', async () => {
         const onUpdate = vi.fn();
         manager.onUpdate(onUpdate);
 
-        await manager.registerRemote(SERVER_DETAILS, 0, {});
+        const { configId } = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
 
-        expect(onUpdate).toHaveBeenCalledOnce();
+        expect(onUpdate).toHaveBeenCalledWith({
+            type: 'register',
+            configId: configId,
+        });
     });
 
     test('disposed listener should not be called', async () => {
@@ -164,7 +172,7 @@ describe('MCPManager#onUpdate', () => {
         // dispose listener
         disposable[Symbol.dispose]();
 
-        await manager.registerRemote(SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
 
         expect(onUpdate).not.toHaveBeenCalled();
     });
@@ -173,7 +181,7 @@ describe('MCPManager#onUpdate', () => {
         const onUpdate = vi.fn();
         manager.onUpdate(onUpdate);
 
-        await manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
+        await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
 
         expect(onUpdate).toHaveBeenCalledOnce();
     });
@@ -202,14 +210,12 @@ describe('MCPManager#onUpdate', () => {
 describe('MCPManager#registerRemote', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
     test('expect error for server details without _meta field', async () => {
         await expect(() => {
-            return manager.registerRemote({
+            return manager.registerRemote(REGISTRY_URL_MOCK, {
                 ...SERVER_DETAILS,
                 _meta: undefined,
             }, 0, {});
@@ -218,12 +224,12 @@ describe('MCPManager#registerRemote', () => {
 
     test('expect error if remoteId is out of bound', async () => {
         await expect(() => {
-            return manager.registerRemote(SERVER_DETAILS, 55, {});
+            return manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 55, {});
         }).rejects.toThrowError('invalid index for remote');
     });
 
     test('expect MCPRemote to be instantiated with correct arguments', async () => {
-        await manager.registerRemote(SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
 
         expect(MCPRemote).toHaveBeenCalledOnce();
         expect(MCPRemote).toHaveBeenCalledWith({
@@ -231,18 +237,16 @@ describe('MCPManager#registerRemote', () => {
             headers: {
                 'FOO': 'bar',
             },
-        }, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        }, undefined);
     });
 
     test('expect MCPRemote#connect to have been called', async () => {
-        await manager.registerRemote(SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
         expect(MCPRemote.prototype.connect).toHaveBeenCalledOnce();
     });
 
     test('expect custom headers to overwrite server details', async () => {
-        await manager.registerRemote(SERVER_DETAILS, 0, {
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {
             'FOO': 'baz'
         });
         expect(MCPRemote).toHaveBeenCalledWith(expect.objectContaining({
@@ -251,13 +255,11 @@ describe('MCPManager#registerRemote', () => {
                     'FOO': 'baz',
                 }
             )
-        }), {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        }), undefined);
     });
 
     test('expect instance to be added to the manager', async () => {
-        const instance = await manager.registerRemote(SERVER_DETAILS, 0, {});
+        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
 
         const all = manager.all();
         expect(all).toHaveLength(1);
@@ -268,13 +270,11 @@ describe('MCPManager#registerRemote', () => {
 describe('MCPManager#stop', () => {
     let manager: MCPManager;
     beforeEach(async () => {
-        manager = new MCPManager(STORAGE_MOCK, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
     test('expect stop remote instance to properly cleanup', async () => {
-        const instance = await manager.registerRemote(SERVER_DETAILS, 0, {});
+        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
         expect(manager.all()).toHaveLength(1);
         expect(MCP_TRANSPORT.close).not.toHaveBeenCalled();
 
@@ -286,7 +286,7 @@ describe('MCPManager#stop', () => {
     });
 
     test('expect stop package instance to properly cleanup', async () => {
-        const instance = await manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
+        const instance = await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
         expect(manager.all()).toHaveLength(1);
         expect(MCPPackage.prototype[Symbol.asyncDispose]).not.toHaveBeenCalled();
         expect(MCP_TRANSPORT.close).not.toHaveBeenCalled();
@@ -303,14 +303,12 @@ describe('MCPManager#stop', () => {
 describe('MCPManager#registerPackage', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
     test('expect error for server details without _meta field', async () => {
         await expect(() => {
-            return manager.registerPackage({
+            return manager.registerPackage(REGISTRY_URL_MOCK, {
                 ...SERVER_DETAILS,
                 _meta: undefined,
             }, 0, {}, {}, {});
@@ -319,12 +317,12 @@ describe('MCPManager#registerPackage', () => {
 
     test('expect error if packageId is out of bound', async () => {
         await expect(() => {
-            return manager.registerPackage(SERVER_DETAILS, 55, {}, {}, {});
+            return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 55, {}, {}, {});
         }).rejects.toThrowError('invalid index for package');
     });
 
     test('expect getMCPSpawner to have been called with appropriate arguments', async () => {
-        await manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
+        await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
 
         expect(MCPPackage).toHaveBeenCalledOnce();
         expect(MCPPackage).toHaveBeenCalledWith({
@@ -346,7 +344,7 @@ describe('MCPManager#registerPackage', () => {
         vi.mocked(MCPPackage.prototype.enabled).mockResolvedValue(false);
 
         await expect(() => {
-            return manager.registerPackage(SERVER_DETAILS, 0, {}, {}, {});
+            return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
         }).rejects.toThrowError('cannot start MCP server for registry foo')
     });
 });
@@ -354,9 +352,7 @@ describe('MCPManager#registerPackage', () => {
 describe('start', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, {
-            client: MCP_REGISTRY_CLIENT_MOCK,
-        });
+        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
     test('start should get from storage the config', async () => {

@@ -37,15 +37,13 @@ const RESPONSE_MOCK: Response = {
     ok: true,
 } as unknown as Response;
 
-let client: MCPRegistryClient;
-
 beforeEach(() => {
     vi.resetAllMocks();
-    client = new MCPRegistryClient({ fetch: FETCH_MOCK });
     vi.mocked(FETCH_MOCK).mockResolvedValue(RESPONSE_MOCK);
 });
 
 interface GetServersTestCase {
+    baseURL?: string,
     parameters: paths['/v0/servers']['get']['parameters'],
     expectedURL: string,
 }
@@ -61,6 +59,16 @@ describe('getServers', () => {
             expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers`
         },
         {
+            baseURL:  `${MCP_REGISTRY_BASE_URL}/subpath/`,
+            parameters: { query: {} },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/subpath/v0/servers`
+        },
+        {
+            baseURL:  `${MCP_REGISTRY_BASE_URL}/subpath`,
+            parameters: { query: {} },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/subpath/v0/servers`
+        },
+        {
             parameters: { query: { limit: 5 } },
             expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers?limit=5`
         },
@@ -71,8 +79,13 @@ describe('getServers', () => {
         {
             parameters: { query: { limit: 20, cursor: '40', } },
             expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers?limit=20&cursor=40`
-        }
-    ])('should call fetch with correct URL for parameters $parameters', async ({ parameters, expectedURL }) => {
+        },
+        {
+            parameters: { query: { cursor: undefined } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers`
+        },
+    ])('should call fetch with correct URL for parameters $parameters', async ({ baseURL, parameters, expectedURL }) => {
+        const client = new MCPRegistryClient({ fetch: FETCH_MOCK, baseURL: baseURL });
         await client.getServers(parameters);
         expect(FETCH_MOCK).toHaveBeenCalledWith(expectedURL);
     });
@@ -98,6 +111,7 @@ describe('getServer', () => {
             expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/bar?version=1.0.0`
         },
     ])('should call fetch with correct URL for parameters $parameters', async ({ parameters, expectedURL }) => {
+        const client = new MCPRegistryClient({ fetch: FETCH_MOCK });
         await client.getServer(parameters);
         expect(FETCH_MOCK).toHaveBeenCalledWith(expectedURL);
     });

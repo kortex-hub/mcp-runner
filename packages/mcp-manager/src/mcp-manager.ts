@@ -21,12 +21,12 @@ import type { components } from '@kortex-hub/mcp-registry-types';
 import { randomUUID } from 'node:crypto';
 import { MCPRemote, MCPPackage } from '@kortex-hub/mcp-runner';
 import type  { MCPRemoteOptions } from "@kortex-hub/mcp-runner";
-import { MCPRegistryClient } from "@kortex-hub/mcp-registry-client";
 import {RemoteConfig} from "/@/models/remote-config";
 import {PackageConfig} from "/@/models/package-config";
 import { EventEmitter } from 'node:events';
 import {formatKeyValueInputs} from "/@/utils/format-key-value-inputs";
 import {formatArguments} from "/@/utils/arguments";
+import { MCPRegistriesClients } from "/@/models/mcp-registries-clients";
 
 export type VersionedServerDetail = components['schemas']['ServerDetail'] & {
     _meta: {
@@ -40,9 +40,7 @@ export type VersionedServerDetail = components['schemas']['ServerDetail'] & {
     }
 }
 
-export type MCPManagerOptions = MCPRemoteOptions & {
-    client?: MCPRegistryClient
-};
+export type MCPManagerOptions = MCPRemoteOptions;
 
 const UPDATE_EVENT = 'mcp-manager-update';
 
@@ -56,16 +54,27 @@ export interface MCPStopEvent {
     configId: string;
 }
 
-export type MCPManagerEvent = MCPStartEvent | MCPStopEvent;
+export interface MCPRegisterEvent {
+    type: 'register';
+    configId: string;
+}
+
+export interface MCPUnregisterEvent {
+    type: 'unregister';
+    configId: string;
+}
+
+export type MCPManagerEvent = MCPStartEvent | MCPStopEvent | MCPRegisterEvent | MCPUnregisterEvent;
 
 export class MCPManager implements AsyncDisposable {
-    #client: MCPRegistryClient;
     #instances: Map<string, MCPInstance> = new Map();
     #event: EventEmitter = new EventEmitter();
 
-    constructor(protected readonly storage: Storage, protected readonly options?: MCPManagerOptions) {
-        this.#client = options?.client ?? new MCPRegistryClient();
-    }
+    constructor(
+        protected readonly storage: Storage,
+        protected readonly clients: MCPRegistriesClients,
+        protected readonly options?: MCPManagerOptions,
+    ) {}
 
     public onUpdate(listener: (event: MCPManagerEvent) => void): Disposable {
         this.#event.on(UPDATE_EVENT, listener);
@@ -87,7 +96,10 @@ export class MCPManager implements AsyncDisposable {
 
         const config = await this.storage.get(configId);
 
-        const server: components['schemas']['ServerDetail'] = await this.#client.getServer({
+        /**
+         * TODO: might be interesting to make this MCPManager fully offline, and save this ServerDetail in the storage
+         */
+        const server: components['schemas']['ServerDetail'] = await this.clients.getClient(config.registryURL).getServer({
             query: {
                 version: config.version,
             },
@@ -111,6 +123,7 @@ export class MCPManager implements AsyncDisposable {
     }
 
     public async registerRemote(
+        registryURL: string,
         server: components['schemas']['ServerDetail'],
         remoteId: number,
         headers: Record<string, string>,
@@ -121,6 +134,7 @@ export class MCPManager implements AsyncDisposable {
         const uuid = randomUUID();
         const config: RemoteConfig = {
             id: uuid,
+            registryURL: registryURL,
             serverId: server._meta["io.modelcontextprotocol.registry/official"].serverId,
             version: server.version,
             type: 'remote',
@@ -133,10 +147,15 @@ export class MCPManager implements AsyncDisposable {
 
         // save config
         await this.storage.add(config);
+        this.notify({
+            type: 'register',
+            configId: config.id,
+        });
         return instance;
     }
 
     public async registerPackage(
+        registryURL: string,
         server: components['schemas']['ServerDetail'],
         packageId: number,
         runtimeArguments: Record<number, string>,
@@ -149,6 +168,7 @@ export class MCPManager implements AsyncDisposable {
         const uuid = randomUUID();
         const config: PackageConfig = {
             id: uuid,
+            registryURL: registryURL,
             serverId: server._meta["io.modelcontextprotocol.registry/official"].serverId,
             version: server.version,
             type: 'package',
@@ -169,11 +189,19 @@ export class MCPManager implements AsyncDisposable {
     public async unregister(configId: string): Promise<void> {
         await this.storage.delete(configId);
         await this.stop(configId);
+        // notify unregister
+        this.notify({
+            type: 'unregister',
+            configId: configId,
+        });
     }
 
     public async stop(configId: string): Promise<void> {
+        const instance = this.#instances.get(configId);
+        if(!instance) return;
+
         try {
-            return this.#instances.get(configId)?.[Symbol.asyncDispose]();
+            return instance[Symbol.asyncDispose]();
         } finally {
             this.notify({
                 type: 'stop',
@@ -214,7 +242,7 @@ export class MCPManager implements AsyncDisposable {
         return instance;
     }
 
-    public async startPackage(
+    protected async startPackage(
         server: components['schemas']['ServerDetail'],
         config: PackageConfig,
     ): Promise<MCPInstance> {

@@ -15,17 +15,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
+import { MCPRegistryClient } from "@kortex-hub/mcp-registry-client";
 
-import { MCPManager, type MCPManagerEvent } from './mcp-manager';
-import { MCPInstance } from "./models/mcp-instance";
-import { MCPRegistriesClients } from "./models/mcp-registries-clients";
-import type { Storage, MCPConfigurations } from './models/storage';
-
-export {
-    MCPManager,
-    type MCPInstance,
-    type MCPRegistriesClients,
-    type Storage,
-    type MCPConfigurations,
-    type MCPManagerEvent,
-};
+export interface MCPRegistriesClients {
+    getClient: (registryURL: string) => MCPRegistryClient;
+}

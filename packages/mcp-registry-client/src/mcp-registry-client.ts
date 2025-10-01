@@ -75,12 +75,11 @@ export class MCPRegistryClient {
         });
         const response = await this.#fetch(resolvedURL);
         if(!response.ok) throw new Error(`Failed to fetch servers for registry ${this.#baseURL}: ${response.statusText} - (URL: ${resolvedURL})`);
-        const body = await response.json()
-        return body as components['schemas']['ServerList'];
+        return (await response.json()) as paths['/v0/servers']['get']['responses'][200]['content']['application/json'];
     }
 
-    public async getServer(parameters: paths['/v0/servers/{server_id}']['get']['parameters']): Promise<components['schemas']['ServerDetail']> {
-        const resolvedURL = this.getURL('/v0/servers/{server_id}', {
+    public async getServer(parameters: paths['/v0/servers/{serverName}']['get']['parameters']): Promise<components['schemas']['ServerResponse']> {
+        const resolvedURL = this.getURL('/v0/servers/{serverName}', {
             queries: parameters.query ? this.filterUndefined(parameters.query) : undefined,
             paths: parameters.path ? this.filterUndefined(parameters.path) : undefined,
         });
@@ -88,19 +87,30 @@ export class MCPRegistryClient {
             resolvedURL,
         );
         if(!response.ok) throw new Error(`Failed to fetch server details for registry ${this.#baseURL}: ${response.statusText} - (URL: ${resolvedURL})`);
-        const body = await response.json()
-        return body as components['schemas']['ServerDetail'];
+        return (await response.json()) as paths['/v0/servers/{serverName}']['get']['responses'][200]['content']['application/json'];
     }
 
-    public async getServerVersions(parameters: paths['/v0/servers/{server_id}']['get']['parameters']): Promise<components['schemas']['ServerList']> {
+    public async getServerVersions(parameters: paths['/v0/servers/{serverName}/versions']['get']['parameters']): Promise<components['schemas']['ServerList']> {
         const response = await this.#fetch(
-            this.getURL('/v0/servers/{server_id}', {
+            this.getURL('/v0/servers/{serverName}/versions', {
                 queries: parameters.query ? this.filterUndefined(parameters.query) : undefined,
                 paths: parameters.path ? this.filterUndefined(parameters.path) : undefined,
             }),
         );
         if(!response.ok) throw new Error(`Failed to fetch server versions for registry ${this.#baseURL}: ${response.statusText}`);
-        const body = await response.json()
-        return body as components['schemas']['ServerList'];
+        return (await response.json()) as paths['/v0/servers/{serverName}/versions']['get']['responses'][200]['content']['application/json'];
+    }
+
+    public async getServerVersion(
+        parameters: paths['/v0/servers/{serverName}/versions/{version}']['get']['parameters']
+    ): Promise<components['schemas']['ServerResponse']> {
+        const response = await this.#fetch(
+            this.getURL('/v0/servers/{serverName}/versions/{version}', {
+                queries: parameters.query ? this.filterUndefined(parameters.query) : undefined,
+                paths: parameters.path ? this.filterUndefined(parameters.path) : undefined,
+            }),
+        );
+        if(!response.ok) throw new Error(`Failed to fetch server versions for registry ${this.#baseURL}: ${response.statusText}`);
+        return (await response.json()) as paths['/v0/servers/{serverName}/versions/{version}']['get']['responses'][200]['content']['application/json'];
     }
 }

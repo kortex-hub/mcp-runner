@@ -37,8 +37,8 @@ importers:
         specifier: workspace:*
         version: link:../mcp-registry-client
       '@kortex-hub/mcp-registry-types':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.3
+        version: 1.2.3
       '@kortex-hub/mcp-runner':
         specifier: workspace:*
         version: link:../mcp-runner
@@ -58,8 +58,8 @@ importers:
   packages/mcp-registry-client:
     devDependencies:
       '@kortex-hub/mcp-registry-types':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.3
+        version: 1.2.3
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -83,8 +83,8 @@ importers:
         specifier: workspace:*
         version: link:../mcp-registry-client
       '@kortex-hub/mcp-registry-types':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.3
+        version: 1.2.3
       ai:
         specifier: ^5.0.59
         version: 5.0.59(zod@3.25.76)
@@ -329,8 +329,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kortex-hub/mcp-registry-types@1.1.0':
-    resolution: {integrity: sha512-V1z/J8MXajEb/UFBYgS8QWVj4+X3KoSSSMkehziJU2j3rDkQkO7J9vfqgesze46mpuu7LJ0yFAkUcTlZ2xrY+A==}
+  '@kortex-hub/mcp-registry-types@1.2.3':
+    resolution: {integrity: sha512-vNVgNt10al3RZsIUwf3VrZl+7qeyDhoNU3VSTLS5K0caXbbuP3KZWzNBDUHZ891oHOX2glXjJSnReOuD5GO/Dw==}
 
   '@microsoft/api-extractor-model@7.30.7':
     resolution: {integrity: sha512-TBbmSI2/BHpfR9YhQA7nH0nqVmGgJ0xH0Ex4D99/qBDAUpnhA2oikGmdXanbw9AWWY/ExBYIpkmY8dBHdla3YQ==}
@@ -1621,7 +1621,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kortex-hub/mcp-registry-types@1.1.0': {}
+  '@kortex-hub/mcp-registry-types@1.2.3': {}
 
   '@microsoft/api-extractor-model@7.30.7(@types/node@24.6.1)':
     dependencies:

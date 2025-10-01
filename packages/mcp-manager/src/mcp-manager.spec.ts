@@ -17,12 +17,13 @@
  ***********************************************************************/
 
 import { expect, test, vi, describe, beforeEach } from "vitest";
-import {MCPManager, type VersionedServerDetail} from "/@/mcp-manager";
+import { MCPManager } from "/@/mcp-manager";
 import type { Storage } from "/@/models/storage";
 import { MCPRemote, MCPPackage } from "@kortex-hub/mcp-runner";
 import {Transport} from "@modelcontextprotocol/sdk/shared/transport.js";
 import type {MCPRegistryClient} from "@kortex-hub/mcp-registry-client";
 import {MCPRegistriesClients} from "/@/models/mcp-registries-clients";
+import type { components } from '@kortex-hub/mcp-registry-types';
 
 // mock runner
 vi.mock('@kortex-hub/mcp-runner');
@@ -34,10 +35,9 @@ const STORAGE_MOCK: Storage = {
     values: vi.fn(),
 }
 
-const SERVER_DETAILS: VersionedServerDetail = {
+const SERVER_DETAILS: components['schemas']['ServerDetail'] = {
     name: 'foo',
     description: 'bar',
-    status: 'active',
     version: '1.0.0',
     remotes: [{
         headers: [{
@@ -83,15 +83,11 @@ const SERVER_DETAILS: VersionedServerDetail = {
             isRequired: false,
         }],
     }],
-    _meta: {
-        "io.modelcontextprotocol.registry/official": {
-            serverId: 'foo-bar',
-            versionId: 'bar-foo',
-            publishedAt: '2023-12-01T10:30:00Z',
-            updatedAt: '2023-12-01T10:30:00Z',
-            isLatest: true,
-        }
-    }
+}
+
+const SERVER_RESPONSE: components['schemas']['ServerResponse'] =  {
+    server: SERVER_DETAILS,
+    _meta: {}
 }
 
 const MCP_TRANSPORT: Transport = {
@@ -108,6 +104,7 @@ const MCP_REGISTRY_CLIENT_MOCK: MCPRegistryClient = {
     getServers: vi.fn(),
     getServer: vi.fn(),
     getServerVersions: vi.fn(),
+    getServerVersion: vi.fn(),
 } as unknown as MCPRegistryClient;
 
 const REGISTRY_URL_MOCK = 'https://foo.bar';
@@ -128,10 +125,9 @@ beforeEach(() => {
     // mock storage
     vi.mocked(STORAGE_MOCK.get).mockResolvedValue({
         type: 'remote',
-        name: 'foo-bar',
+        name: SERVER_DETAILS.name,
         registryURL: REGISTRY_URL_MOCK,
         remoteId: 0,
-        serverId: SERVER_DETAILS._meta["io.modelcontextprotocol.registry/official"].serverId,
         version: SERVER_DETAILS.version,
         id: 'foo-bar',
         headers: {},
@@ -139,7 +135,7 @@ beforeEach(() => {
 
     // mock MCP Registry client
     vi.mocked(MCP_REGISTRIES_CLIENTS_MOCK.getClient).mockReturnValue(MCP_REGISTRY_CLIENT_MOCK);
-    vi.mocked(MCP_REGISTRY_CLIENT_MOCK.getServer).mockResolvedValue(SERVER_DETAILS);
+    vi.mocked(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).mockResolvedValue(SERVER_RESPONSE);
 });
 
 test('MCPManager should not have any instance after constructor', () => {
@@ -211,15 +207,6 @@ describe('MCPManager#registerRemote', () => {
     let manager: MCPManager;
     beforeEach(() => {
         manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
-    });
-
-    test('expect error for server details without _meta field', async () => {
-        await expect(() => {
-            return manager.registerRemote(REGISTRY_URL_MOCK, {
-                ...SERVER_DETAILS,
-                _meta: undefined,
-            }, 0, {});
-        }).rejects.toThrowError('missing "io.modelcontextprotocol.registry/official" metadata on server details');
     });
 
     test('expect error if remoteId is out of bound', async () => {
@@ -306,15 +293,6 @@ describe('MCPManager#registerPackage', () => {
         manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
     });
 
-    test('expect error for server details without _meta field', async () => {
-        await expect(() => {
-            return manager.registerPackage(REGISTRY_URL_MOCK, {
-                ...SERVER_DETAILS,
-                _meta: undefined,
-            }, 0, {}, {}, {});
-        }).rejects.toThrowError('missing "io.modelcontextprotocol.registry/official" metadata on server details');
-    });
-
     test('expect error if packageId is out of bound', async () => {
         await expect(() => {
             return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 55, {}, {}, {});
@@ -368,13 +346,11 @@ describe('start', () => {
     test('start should use MCPRegistryClient to get full server details', async () => {
         await manager.start('foo-bar');
 
-        expect(MCP_REGISTRY_CLIENT_MOCK.getServer).toHaveBeenCalledOnce();
-        expect(MCP_REGISTRY_CLIENT_MOCK.getServer).toHaveBeenCalledWith({
-            query: {
-                version: SERVER_DETAILS.version,
-            },
+        expect(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).toHaveBeenCalledOnce();
+        expect(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).toHaveBeenCalledWith({
             path: {
-                server_id: SERVER_DETAILS._meta["io.modelcontextprotocol.registry/official"].serverId,
+                version: SERVER_DETAILS.version,
+                serverName: SERVER_DETAILS.name,
             }
         });
     });

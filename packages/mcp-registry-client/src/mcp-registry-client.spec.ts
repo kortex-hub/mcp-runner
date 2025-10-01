@@ -28,7 +28,6 @@ const SERVER_LIST_EMPTY: components['schemas']['ServerList'] = {
 const SERVER_DETAILS: components['schemas']['Server'] = {
     name: 'foo',
     description: 'bar',
-    status: 'active',
     version: '1.0.0'
 }
 
@@ -92,7 +91,7 @@ describe('getServers', () => {
 });
 
 interface GetServerTestCase {
-    parameters: paths['/v0/servers/{server_id}']['get']['parameters'],
+    parameters: paths['/v0/servers/{serverName}']['get']['parameters'],
     expectedURL: string,
 }
 
@@ -103,12 +102,12 @@ describe('getServer', () => {
 
     test.each<GetServerTestCase>([
         {
-            parameters: { path: { server_id: 'foo' }, query: {} },
+            parameters: { path: { serverName: encodeURI('foo') } },
             expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/foo`
         },
         {
-            parameters: { path: { server_id: 'bar' }, query: { version: '1.0.0' } },
-            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/bar?version=1.0.0`
+            parameters: { path: { serverName: encodeURI('bar') } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/bar`
         },
     ])('should call fetch with correct URL for parameters $parameters', async ({ parameters, expectedURL }) => {
         const client = new MCPRegistryClient({ fetch: FETCH_MOCK });
@@ -117,4 +116,54 @@ describe('getServer', () => {
     });
 });
 
+interface GetServerVersionsTestCase {
+    parameters: paths['/v0/servers/{serverName}/versions']['get']['parameters'],
+    expectedURL: string,
+}
 
+describe('getServers', () => {
+    beforeEach(() => {
+        vi.mocked(RESPONSE_MOCK.json).mockResolvedValue(SERVER_DETAILS);
+    });
+
+    test.each<GetServerVersionsTestCase>([
+        {
+            parameters: { path: { serverName: encodeURI('foo') } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/foo/versions`
+        },
+        {
+            parameters: { path: { serverName: encodeURI('bar') } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/bar/versions`
+        },
+    ])('should call fetch with correct URL for parameters $parameters', async ({ parameters, expectedURL }) => {
+        const client = new MCPRegistryClient({ fetch: FETCH_MOCK });
+        await client.getServerVersions(parameters);
+        expect(FETCH_MOCK).toHaveBeenCalledWith(expectedURL);
+    });
+});
+
+interface GetServerVersionTestCase {
+    parameters: paths['/v0/servers/{serverName}/versions/{version}']['get']['parameters'],
+    expectedURL: string,
+}
+
+describe('getServerVersion', () => {
+    beforeEach(() => {
+        vi.mocked(RESPONSE_MOCK.json).mockResolvedValue(SERVER_DETAILS);
+    });
+
+    test.each<GetServerVersionTestCase>([
+        {
+            parameters: { path: { serverName: encodeURI('foo'), version: encodeURI('1.0.5') } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/foo/versions/1.0.5`
+        },
+        {
+            parameters: { path: { serverName: encodeURI('bar'), version: encodeURI('2.8.3') } },
+            expectedURL: `${MCP_REGISTRY_BASE_URL}/v0/servers/bar/versions/2.8.3`
+        },
+    ])('should call fetch with correct URL for parameters $parameters', async ({ parameters, expectedURL }) => {
+        const client = new MCPRegistryClient({ fetch: FETCH_MOCK });
+        await client.getServerVersion(parameters);
+        expect(FETCH_MOCK).toHaveBeenCalledWith(expectedURL);
+    });
+});

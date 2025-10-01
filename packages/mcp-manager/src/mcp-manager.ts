@@ -28,18 +28,6 @@ import {formatKeyValueInputs} from "/@/utils/format-key-value-inputs";
 import {formatArguments} from "/@/utils/arguments";
 import { MCPRegistriesClients } from "/@/models/mcp-registries-clients";
 
-export type VersionedServerDetail = components['schemas']['ServerDetail'] & {
-    _meta: {
-        "io.modelcontextprotocol.registry/official": {
-            serverId: string;
-            versionId: string;
-            publishedAt: string;
-            updatedAt: string;
-            isLatest: boolean;
-        }
-    }
-}
-
 export type MCPManagerOptions = MCPRemoteOptions;
 
 const UPDATE_EVENT = 'mcp-manager-update';
@@ -99,28 +87,21 @@ export class MCPManager implements AsyncDisposable {
         /**
          * TODO: might be interesting to make this MCPManager fully offline, and save this ServerDetail in the storage
          */
-        const server: components['schemas']['ServerDetail'] = await this.clients.getClient(config.registryURL).getServer({
-            query: {
-                version: config.version,
-            },
+        const response: components['schemas']['ServerResponse'] = await this.clients.getClient(config.registryURL).getServerVersion({
             path: {
-                server_id: config.serverId,
-            }
+                serverName: encodeURI(config.name),
+                version: encodeURI(config.version),
+            },
         });
-
-        if(!this.isVersionedServerDetail(server)) throw new Error('missing "io.modelcontextprotocol.registry/official" metadata on server details');
 
         switch (config.type) {
             case "remote":
-                return this.startRemote(server, config);
+                return this.startRemote(response.server, config);
             case "package":
-                return this.startPackage(server, config);
+                return this.startPackage(response.server, config);
         }
     }
 
-    protected isVersionedServerDetail(server: components['schemas']['ServerDetail']): server is VersionedServerDetail {
-        return !!server._meta?.["io.modelcontextprotocol.registry/official"];
-    }
 
     public async registerRemote(
         registryURL: string,
@@ -128,14 +109,11 @@ export class MCPManager implements AsyncDisposable {
         remoteId: number,
         headers: Record<string, string>,
     ): Promise<MCPInstance> {
-        if(!this.isVersionedServerDetail(server)) throw new Error('missing "io.modelcontextprotocol.registry/official" metadata on server details');
-
         // Create a Remote Config
         const uuid = randomUUID();
         const config: RemoteConfig = {
             id: uuid,
             registryURL: registryURL,
-            serverId: server._meta["io.modelcontextprotocol.registry/official"].serverId,
             version: server.version,
             type: 'remote',
             remoteId: remoteId,
@@ -162,14 +140,11 @@ export class MCPManager implements AsyncDisposable {
         packageArguments: Record<number, string>,
         environmentVariables: Record<string, string>,
     ): Promise<MCPInstance> {
-        if(!this.isVersionedServerDetail(server)) throw new Error('missing "io.modelcontextprotocol.registry/official" metadata on server details');
-
         // Create a Remote Config
         const uuid = randomUUID();
         const config: PackageConfig = {
             id: uuid,
             registryURL: registryURL,
-            serverId: server._meta["io.modelcontextprotocol.registry/official"].serverId,
             version: server.version,
             type: 'package',
             packageId: packageId,
@@ -211,7 +186,7 @@ export class MCPManager implements AsyncDisposable {
     }
 
     protected async startRemote(
-        server: VersionedServerDetail,
+        server: components['schemas']['ServerDetail'],
         config: RemoteConfig,
     ): Promise<MCPInstance> {
         if(!server.remotes?.[config.remoteId]) throw new Error('invalid index for remote');
@@ -246,7 +221,6 @@ export class MCPManager implements AsyncDisposable {
         server: components['schemas']['ServerDetail'],
         config: PackageConfig,
     ): Promise<MCPInstance> {
-        if(!server._meta?.["io.modelcontextprotocol.registry/official"]) throw new Error('missing "io.modelcontextprotocol.registry/official" metadata on server details');
         if(!server.packages?.[config.packageId]) throw new Error('invalid index for package');
 
         const spawner = new MCPPackage({

@@ -16,11 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 import {BaseConfig} from "/@/models/base-config";
+import type {components} from "@kortex-hub/mcp-registry-types";
 
 export interface PackageConfig extends BaseConfig {
     type: 'package';
-    packageId: number;
+    /**
+     * The Package object from the registry
+     */
+    package: components['schemas']['Package'];
+    /**
+     * The runtime arguments specified by the user
+     */
     runtimeArguments: Record<number, string>;
+    /**
+     * The package arguments specified by the user
+     */
     packageArguments: Record<number, string>;
+    /**
+     * The environment variables specified by the user
+     */
     environmentVariables: Record<string, string>;
 }

@@ -26,7 +26,6 @@ import {PackageConfig} from "/@/models/package-config";
 import { EventEmitter } from 'node:events';
 import {formatKeyValueInputs} from "/@/utils/format-key-value-inputs";
 import {formatArguments} from "/@/utils/arguments";
-import { MCPRegistriesClients } from "/@/models/mcp-registries-clients";
 
 export type MCPManagerOptions = MCPRemoteOptions;
 
@@ -60,7 +59,6 @@ export class MCPManager implements AsyncDisposable {
 
     constructor(
         protected readonly storage: Storage,
-        protected readonly clients: MCPRegistriesClients,
         protected readonly options?: MCPManagerOptions,
     ) {}
 
@@ -84,29 +82,19 @@ export class MCPManager implements AsyncDisposable {
 
         const config = await this.storage.get(configId);
 
-        /**
-         * TODO: might be interesting to make this MCPManager fully offline, and save this ServerDetail in the storage
-         */
-        const response: components['schemas']['ServerResponse'] = await this.clients.getClient(config.registryURL).getServerVersion({
-            path: {
-                serverName: encodeURI(config.name),
-                version: encodeURI(config.version),
-            },
-        });
-
         switch (config.type) {
             case "remote":
-                return this.startRemote(response.server, config);
+                return this.startRemote(config);
             case "package":
-                return this.startPackage(response.server, config);
+                return this.startPackage(config);
         }
     }
 
 
     public async registerRemote(
         registryURL: string,
-        server: components['schemas']['ServerDetail'],
-        remoteId: number,
+        server: components['schemas']['Server'],
+        remote: components['schemas']['Remote'],
         headers: Record<string, string>,
     ): Promise<MCPInstance> {
         // Create a Remote Config
@@ -114,14 +102,13 @@ export class MCPManager implements AsyncDisposable {
         const config: RemoteConfig = {
             id: uuid,
             registryURL: registryURL,
-            version: server.version,
+            server: server,
             type: 'remote',
-            remoteId: remoteId,
+            remote: remote,
             headers: headers,
-            name: server.name,
         };
 
-        const instance = await this.startRemote(server, config);
+        const instance = await this.startRemote(config);
 
         // save config
         await this.storage.add(config);
@@ -134,8 +121,8 @@ export class MCPManager implements AsyncDisposable {
 
     public async registerPackage(
         registryURL: string,
-        server: components['schemas']['ServerDetail'],
-        packageId: number,
+        server: components['schemas']['Server'],
+        pack: components['schemas']['Package'],
         runtimeArguments: Record<number, string>,
         packageArguments: Record<number, string>,
         environmentVariables: Record<string, string>,
@@ -145,19 +132,22 @@ export class MCPManager implements AsyncDisposable {
         const config: PackageConfig = {
             id: uuid,
             registryURL: registryURL,
-            version: server.version,
+            server: server,
             type: 'package',
-            packageId: packageId,
+            package: pack,
             runtimeArguments: runtimeArguments,
             packageArguments: packageArguments,
             environmentVariables: environmentVariables,
-            name: server.name,
         };
 
-        const instance = await this.startPackage(server, config);
+        const instance = await this.startPackage( config);
 
         // save config
         await this.storage.add(config);
+        this.notify({
+            type: 'register',
+            configId: config.id,
+        });
         return instance;
     }
 
@@ -186,15 +176,12 @@ export class MCPManager implements AsyncDisposable {
     }
 
     protected async startRemote(
-        server: components['schemas']['ServerDetail'],
         config: RemoteConfig,
     ): Promise<MCPInstance> {
-        if(!server.remotes?.[config.remoteId]) throw new Error('invalid index for remote');
-
         const connector = new MCPRemote({
-            ...server.remotes?.[config.remoteId],
+            ...config.remote,
             // resolve headers with config values and server values
-            headers: formatKeyValueInputs(server.remotes?.[config.remoteId].headers, config.headers),
+            headers: formatKeyValueInputs(config.remote.headers, config.headers),
         }, this.options);
         const transport = await connector.connect();
 
@@ -218,23 +205,20 @@ export class MCPManager implements AsyncDisposable {
     }
 
     protected async startPackage(
-        server: components['schemas']['ServerDetail'],
         config: PackageConfig,
     ): Promise<MCPInstance> {
-        if(!server.packages?.[config.packageId]) throw new Error('invalid index for package');
-
         const spawner = new MCPPackage({
-            ...server.packages?.[config.packageId],
-            runtimeArguments: formatArguments(server.packages?.[config.packageId]?.runtimeArguments, config.runtimeArguments),
+            ...config.package,
+            runtimeArguments: formatArguments(config.package.runtimeArguments, config.runtimeArguments),
             // if the user provided package arguments, we want to override it
-            packageArguments: formatArguments(server.packages?.[config.packageId]?.packageArguments, config.packageArguments),
+            packageArguments: formatArguments(config.package.packageArguments, config.packageArguments),
             // if the user provided environment variables, we want to override it
-            environmentVariables: formatKeyValueInputs(server.packages?.[config.packageId]?.environmentVariables, config.environmentVariables),
+            environmentVariables: formatKeyValueInputs(config.package.environmentVariables, config.environmentVariables),
         });
 
         // ensure the spawner is enabled
         if(!(await spawner.enabled())) {
-            throw new Error(`cannot start MCP server for registry ${server.packages?.[config.packageId].registryType}`);
+            throw new Error(`cannot start MCP server for registry ${config.package.registryType}`);
         }
 
         // spawn the process

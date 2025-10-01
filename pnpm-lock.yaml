@@ -33,9 +33,6 @@ importers:
         specifier: ^1.18.2
         version: 1.18.2
     devDependencies:
-      '@kortex-hub/mcp-registry-client':
-        specifier: workspace:*
-        version: link:../mcp-registry-client
       '@kortex-hub/mcp-registry-types':
         specifier: ^1.2.3
         version: 1.2.3
@@ -79,9 +76,6 @@ importers:
         specifier: ^1.18.2
         version: 1.18.2
     devDependencies:
-      '@kortex-hub/mcp-registry-client':
-        specifier: workspace:*
-        version: link:../mcp-registry-client
       '@kortex-hub/mcp-registry-types':
         specifier: ^1.2.3
         version: 1.2.3

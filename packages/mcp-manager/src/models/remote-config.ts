@@ -16,9 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 import { BaseConfig } from "/@/models/base-config";
+import type {components} from "@kortex-hub/mcp-registry-types";
 
 export interface RemoteConfig extends BaseConfig {
     type: 'remote';
-    remoteId: number;
+    remote: components['schemas']['Remote'];
     headers: Record<string, string>;
 }

@@ -21,8 +21,6 @@ import { MCPManager } from "/@/mcp-manager";
 import type { Storage } from "/@/models/storage";
 import { MCPRemote, MCPPackage } from "@kortex-hub/mcp-runner";
 import {Transport} from "@modelcontextprotocol/sdk/shared/transport.js";
-import type {MCPRegistryClient} from "@kortex-hub/mcp-registry-client";
-import {MCPRegistriesClients} from "/@/models/mcp-registries-clients";
 import type { components } from '@kortex-hub/mcp-registry-types';
 
 // mock runner
@@ -35,59 +33,62 @@ const STORAGE_MOCK: Storage = {
     values: vi.fn(),
 }
 
-const SERVER_DETAILS: components['schemas']['ServerDetail'] = {
+const SERVER: components["schemas"]["Server"] =  {
     name: 'foo',
     description: 'bar',
     version: '1.0.0',
-    remotes: [{
-        headers: [{
-            name: 'FOO',
-            value: 'bar',
-            format: 'string',
-            isSecret: false,
-            isRequired: false,
-        }],
-        url: 'https://foo.bar',
-        type: 'streamable-http',
+}
+
+const REMOTE_FOO: components['schemas']['Remote'] = {
+    headers: [{
+        name: 'FOO',
+        value: 'bar',
+        format: 'string',
+        isSecret: false,
+        isRequired: false,
     }],
-    packages: [{
-        runtimeArguments: [{
-            type: 'named',
-            name: '--foo-runtime',
-            value: 'bar-runtime',
-            format: 'string',
-            isSecret: false,
-            isRequired: false,
-        },
-            {
-                value: 'bar-runtime-positional',
-                format: 'string',
-                isSecret: false,
-                isRequired: false,
-            }],
-        packageArguments: [{
-            name: 'foo-package',
-            value: 'bar-package',
-            format: 'string',
-            isSecret: false,
-            isRequired: false,
-        }],
-        version: '1.0.0',
-        identifier: 'foo',
-        registryType: 'foo',
-        environmentVariables: [{
-            name: 'foo-env',
-            value: 'bar-env',
+    url: 'https://foo.bar',
+    type: 'streamable-http',
+}
+
+const PACKAGE_FOO:  components['schemas']['Package'] ={
+    runtimeArguments: [{
+        type: 'named',
+        name: '--foo-runtime',
+        value: 'bar-runtime',
+        format: 'string',
+        isSecret: false,
+        isRequired: false,
+    },
+        {
+            value: 'bar-runtime-positional',
             format: 'string',
             isSecret: false,
             isRequired: false,
         }],
+    packageArguments: [{
+        name: 'foo-package',
+        value: 'bar-package',
+        format: 'string',
+        isSecret: false,
+        isRequired: false,
+    }],
+    version: '1.0.0',
+    identifier: 'foo',
+    registryType: 'foo',
+    environmentVariables: [{
+        name: 'foo-env',
+        value: 'bar-env',
+        format: 'string',
+        isSecret: false,
+        isRequired: false,
     }],
 }
 
-const SERVER_RESPONSE: components['schemas']['ServerResponse'] =  {
-    server: SERVER_DETAILS,
-    _meta: {}
+const SERVER_DETAILS: components['schemas']['ServerDetail'] = {
+    ...SERVER,
+    remotes: [REMOTE_FOO],
+    packages: [PACKAGE_FOO],
 }
 
 const MCP_TRANSPORT: Transport = {
@@ -95,17 +96,6 @@ const MCP_TRANSPORT: Transport = {
     start: vi.fn(),
     send: vi.fn()
 }
-
-const MCP_REGISTRIES_CLIENTS_MOCK: MCPRegistriesClients = {
-    getClient: vi.fn(),
-}
-
-const MCP_REGISTRY_CLIENT_MOCK: MCPRegistryClient = {
-    getServers: vi.fn(),
-    getServer: vi.fn(),
-    getServerVersions: vi.fn(),
-    getServerVersion: vi.fn(),
-} as unknown as MCPRegistryClient;
 
 const REGISTRY_URL_MOCK = 'https://foo.bar';
 
@@ -125,35 +115,30 @@ beforeEach(() => {
     // mock storage
     vi.mocked(STORAGE_MOCK.get).mockResolvedValue({
         type: 'remote',
-        name: SERVER_DETAILS.name,
         registryURL: REGISTRY_URL_MOCK,
-        remoteId: 0,
-        version: SERVER_DETAILS.version,
+        server: SERVER,
+        remote: REMOTE_FOO,
         id: 'foo-bar',
         headers: {},
     });
-
-    // mock MCP Registry client
-    vi.mocked(MCP_REGISTRIES_CLIENTS_MOCK.getClient).mockReturnValue(MCP_REGISTRY_CLIENT_MOCK);
-    vi.mocked(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).mockResolvedValue(SERVER_RESPONSE);
 });
 
 test('MCPManager should not have any instance after constructor', () => {
-    const manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
+    const manager = new MCPManager(STORAGE_MOCK);
     expect(manager.all()).toHaveLength(0);
 });
 
 describe('MCPManager#onUpdate', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
+        manager = new MCPManager(STORAGE_MOCK);
     });
 
     test('listener should be called on registerRemote', async () => {
         const onUpdate = vi.fn();
         manager.onUpdate(onUpdate);
 
-        const { configId } = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        const { configId } = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER, REMOTE_FOO, {});
 
         expect(onUpdate).toHaveBeenCalledWith({
             type: 'register',
@@ -168,7 +153,7 @@ describe('MCPManager#onUpdate', () => {
         // dispose listener
         disposable[Symbol.dispose]();
 
-        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {});
 
         expect(onUpdate).not.toHaveBeenCalled();
     });
@@ -177,9 +162,12 @@ describe('MCPManager#onUpdate', () => {
         const onUpdate = vi.fn();
         manager.onUpdate(onUpdate);
 
-        await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
+        const { configId } = await manager.registerPackage(REGISTRY_URL_MOCK, SERVER, PACKAGE_FOO, {}, {}, {});
 
-        expect(onUpdate).toHaveBeenCalledOnce();
+        expect(onUpdate).toHaveBeenCalledWith({
+            type: 'register',
+            configId: configId,
+        });
     });
 
     test('listener should be called on start', async () => {
@@ -188,7 +176,10 @@ describe('MCPManager#onUpdate', () => {
 
         const instance = await manager.start('foo-bar');
 
-        expect(onUpdate).toHaveBeenCalledOnce();
+        expect(onUpdate).toHaveBeenCalledExactlyOnceWith({
+            type: 'start',
+            instance: instance,
+        })
     });
 
     test('listener should be called on stop', async () => {
@@ -206,17 +197,11 @@ describe('MCPManager#onUpdate', () => {
 describe('MCPManager#registerRemote', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
-    });
-
-    test('expect error if remoteId is out of bound', async () => {
-        await expect(() => {
-            return manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 55, {});
-        }).rejects.toThrowError('invalid index for remote');
+        manager = new MCPManager(STORAGE_MOCK);
     });
 
     test('expect MCPRemote to be instantiated with correct arguments', async () => {
-        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {});
 
         expect(MCPRemote).toHaveBeenCalledOnce();
         expect(MCPRemote).toHaveBeenCalledWith({
@@ -228,12 +213,12 @@ describe('MCPManager#registerRemote', () => {
     });
 
     test('expect MCPRemote#connect to have been called', async () => {
-        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {});
         expect(MCPRemote.prototype.connect).toHaveBeenCalledOnce();
     });
 
     test('expect custom headers to overwrite server details', async () => {
-        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {
+        await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {
             'FOO': 'baz'
         });
         expect(MCPRemote).toHaveBeenCalledWith(expect.objectContaining({
@@ -246,7 +231,7 @@ describe('MCPManager#registerRemote', () => {
     });
 
     test('expect instance to be added to the manager', async () => {
-        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {});
 
         const all = manager.all();
         expect(all).toHaveLength(1);
@@ -257,11 +242,11 @@ describe('MCPManager#registerRemote', () => {
 describe('MCPManager#stop', () => {
     let manager: MCPManager;
     beforeEach(async () => {
-        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
+        manager = new MCPManager(STORAGE_MOCK);
     });
 
     test('expect stop remote instance to properly cleanup', async () => {
-        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {});
+        const instance = await manager.registerRemote(REGISTRY_URL_MOCK, SERVER_DETAILS, REMOTE_FOO, {});
         expect(manager.all()).toHaveLength(1);
         expect(MCP_TRANSPORT.close).not.toHaveBeenCalled();
 
@@ -273,7 +258,7 @@ describe('MCPManager#stop', () => {
     });
 
     test('expect stop package instance to properly cleanup', async () => {
-        const instance = await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
+        const instance = await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, PACKAGE_FOO, {}, {}, {});
         expect(manager.all()).toHaveLength(1);
         expect(MCPPackage.prototype[Symbol.asyncDispose]).not.toHaveBeenCalled();
         expect(MCP_TRANSPORT.close).not.toHaveBeenCalled();
@@ -290,17 +275,11 @@ describe('MCPManager#stop', () => {
 describe('MCPManager#registerPackage', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
-    });
-
-    test('expect error if packageId is out of bound', async () => {
-        await expect(() => {
-            return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 55, {}, {}, {});
-        }).rejects.toThrowError('invalid index for package');
+        manager = new MCPManager(STORAGE_MOCK);
     });
 
     test('expect getMCPSpawner to have been called with appropriate arguments', async () => {
-        await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
+        await manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, PACKAGE_FOO, {}, {}, {});
 
         expect(MCPPackage).toHaveBeenCalledOnce();
         expect(MCPPackage).toHaveBeenCalledWith({
@@ -322,15 +301,15 @@ describe('MCPManager#registerPackage', () => {
         vi.mocked(MCPPackage.prototype.enabled).mockResolvedValue(false);
 
         await expect(() => {
-            return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, 0, {}, {}, {});
+            return manager.registerPackage(REGISTRY_URL_MOCK, SERVER_DETAILS, PACKAGE_FOO, {}, {}, {});
         }).rejects.toThrowError('cannot start MCP server for registry foo')
     });
 });
 
-describe('start', () => {
+describe('MCPManager#start', () => {
     let manager: MCPManager;
     beforeEach(() => {
-        manager = new MCPManager(STORAGE_MOCK, MCP_REGISTRIES_CLIENTS_MOCK);
+        manager = new MCPManager(STORAGE_MOCK);
     });
 
     test('start should get from storage the config', async () => {
@@ -341,18 +320,6 @@ describe('start', () => {
 
         expect(STORAGE_MOCK.get).toHaveBeenCalledOnce();
         expect(STORAGE_MOCK.get).toHaveBeenCalledWith('foo-bar');
-    });
-
-    test('start should use MCPRegistryClient to get full server details', async () => {
-        await manager.start('foo-bar');
-
-        expect(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).toHaveBeenCalledOnce();
-        expect(MCP_REGISTRY_CLIENT_MOCK.getServerVersion).toHaveBeenCalledWith({
-            path: {
-                version: SERVER_DETAILS.version,
-                serverName: SERVER_DETAILS.name,
-            }
-        });
     });
 
     test('should should return appropriate MCP instance', async () => {

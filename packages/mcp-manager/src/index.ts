@@ -18,13 +18,11 @@
 
 import { MCPManager, type MCPManagerEvent } from './mcp-manager';
 import { MCPInstance } from "./models/mcp-instance";
-import { MCPRegistriesClients } from "./models/mcp-registries-clients";
 import type { Storage, MCPConfigurations } from './models/storage';
 
 export {
     MCPManager,
     type MCPInstance,
-    type MCPRegistriesClients,
     type Storage,
     type MCPConfigurations,
     type MCPManagerEvent,

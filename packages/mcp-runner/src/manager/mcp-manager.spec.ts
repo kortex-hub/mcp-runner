@@ -17,14 +17,16 @@
  ***********************************************************************/
 
 import { expect, test, vi, describe, beforeEach } from "vitest";
-import { MCPManager } from "/@/mcp-manager";
+import { MCPManager } from "./mcp-manager";
 import type { Storage } from "/@/models/storage";
-import { MCPRemote, MCPPackage } from "@kortex-hub/mcp-runner";
 import {Transport} from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { components } from '@kortex-hub/mcp-registry-types';
+import {MCPRemote} from "/@/remote/mcp-remote.js";
+import {MCPPackage} from "/@/package/mcp-package.js";
 
 // mock runner
-vi.mock('@kortex-hub/mcp-runner');
+vi.mock(import('/@/package/mcp-package.js'));
+vi.mock(import('/@/remote/mcp-remote.js'));
 
 const STORAGE_MOCK: Storage = {
     get: vi.fn(),

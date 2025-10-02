@@ -43,10 +43,12 @@ jobs:
         run: |
           git config --local user.name ${{ github.actor }}
 
-          # Add the new version in package.json file
+          # Add the new version in package.json files
           sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${{ steps.TAG_UTIL.outputs.apiVersion }}\",#g" package.json
-          git add package.json
-
+          find packages/* -maxdepth 1 -name "package.json" | xargs -I {} sed -i "s#version\":\ \"\(.*\)\",#version\":\ \"${{ steps.TAG_UTIL.outputs.apiVersion }}\",#g" {}
+          
+          # Add all modified package.json files
+          git add package.json packages/*/package.json
 
           # commit the changes
           git commit -m "chore: 🥁 tagging ${{ steps.TAG_UTIL.outputs.githubTag }} 🥳"
@@ -73,8 +75,14 @@ jobs:
           bumpedVersion=${CURRENT_VERSION%%.*}.$((minor + 1)).0
           bumpedBranchName="bump-to-${bumpedVersion}"
           git checkout -b "${bumpedBranchName}"
+          
+          # Add the new version in package.json files
           sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${bumpedVersion}-next\",#g" package.json
-          git add package.json
+          find packages/* -maxdepth 1 -name "package.json" | xargs -I {} sed -i "s#version\":\ \"\(.*\)\",#version\":\ \"${bumpedVersion}-next\",#g" {}
+
+          # Add all modified package.json files
+          git add package.json packages/*/package.json
+
           git commit -s --amend -m "chore: bump version to ${bumpedVersion}"
           git push origin "${bumpedBranchName}"
           echo -e "📢 Bump version to ${bumpedVersion}\n\n${{ steps.TAG_UTIL.outputs.apiVersion }} has been released.\n\n Time to switch to the new ${bumpedVersion} version 🥳" > /tmp/pr-title

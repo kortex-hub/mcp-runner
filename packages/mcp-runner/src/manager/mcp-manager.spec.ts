@@ -24,7 +24,7 @@ import type { components } from '@kortex-hub/mcp-registry-types';
 import {MCPRemote} from "/@/remote/mcp-remote.js";
 import {MCPPackage} from "/@/package/mcp-package.js";
 
-// mock runner
+// mock MCPRemote & MCPPackage classes
 vi.mock(import('/@/package/mcp-package.js'));
 vi.mock(import('/@/remote/mcp-remote.js'));
 

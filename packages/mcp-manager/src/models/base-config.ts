@@ -15,6 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
+import type { components } from '@kortex-hub/mcp-registry-types';
 
 export interface BaseConfig {
     /**
@@ -26,15 +27,11 @@ export interface BaseConfig {
      */
     type: 'remote' | 'package';
     /**
-     * The semantic version of the server from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.version}
-     */
-    version: string;
-    /**
-     * Server name from {@link import('@kortex-hub/mcp-registry-types').components.schemas.Server.name}
-     */
-    name: string;
-    /**
      * Specify the registry URL to use for this server.
      */
     registryURL: string;
+    /**
+     * The Server object from the registry
+     */
+    server: components['schemas']['Server'];
 }

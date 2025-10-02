@@ -17,7 +17,49 @@
  ***********************************************************************/
 import { MCPPackage } from "./package/mcp-package";
 import { MCPRemote } from "./remote/mcp-remote";
-import type { MCPRemoteOptions } from "./remote/mcp-remote";
-import type { MCPSpawner } from './spawner/mcp-spawner';
+import type { MCPRemoteOptions, ResolvedServerRemote } from "./remote/mcp-remote";
+import type { MCPSpawner, ResolvedServerPackage } from './spawner/mcp-spawner';
+import { MCPManager } from './manager/mcp-manager';
+import type { MCPManagerEvent, MCPManagerOptions, MCPRegisterEvent, MCPStartEvent, MCPStopEvent } from './manager/mcp-manager';
+import type { MCPInstance } from "./models/mcp-instance";
+import type { MCPConfigurations, Storage } from "./models/storage";
+import { MCPRegistryClient } from "./registry/mcp-registry-client";
+import type { MCPRegistryClientOptions } from "./registry/mcp-registry-client";
 
-export { type MCPSpawner,  type MCPRemoteOptions, MCPPackage, MCPRemote, };
+export {
+    /**
+     * MCP Manager-related exports
+     */
+    type MCPManagerEvent,
+    type MCPRegisterEvent,
+    type MCPStopEvent,
+    type MCPStartEvent,
+    type MCPManagerOptions,
+    type MCPInstance,
+    MCPManager,
+    /**
+     * Storage-related exports
+     */
+    type MCPConfigurations,
+    type Storage,
+    /**
+     * MCP Spawner-related exports
+     */
+    type MCPSpawner,
+    /**
+     * MCP Package-related exports
+     */
+    MCPPackage,
+    type ResolvedServerPackage,
+    /**
+     * MCP Remote-related exports
+     */
+    MCPRemote,
+    type ResolvedServerRemote,
+    type MCPRemoteOptions,
+    /**
+     * MCP Registry client-related exports
+     */
+    MCPRegistryClient,
+    type MCPRegistryClientOptions,
+};

@@ -1,9 +1,0 @@
-{
-  "extends": "@tsconfig/node22/tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "/@/*": ["./src/*"],
-    }
-  },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-}

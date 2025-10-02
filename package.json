@@ -6,13 +6,9 @@
   "private": true,
   "scripts": {
     "test:unit": "vitest run --passWithNoTests",
-    "build:mcp-registry-client": "cd packages/mcp-registry-client &&  pnpm run build",
     "build:mcp-runner": "cd packages/mcp-runner &&  pnpm run build",
-    "build:mcp-manager": "cd packages/mcp-manager &&  pnpm run build",
-    "build": "pnpm run build:mcp-registry-client && pnpm run build:mcp-runner && pnpm run build:mcp-manager",
-    "typecheck:mcp-manager": "tsc --noEmit --project packages/mcp-manager",
+    "build": "pnpm run build:mcp-runner",
     "typecheck:mcp-runner": "tsc --noEmit --project packages/mcp-runner",
-    "typecheck:mcp-registry-client": "tsc --noEmit --project packages/mcp-registry-client",
     "typecheck": "pnpm run /typecheck:.*/"
   },
   "keywords": [],

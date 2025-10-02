@@ -141,4 +141,6 @@ jobs:
         run: |
           echo "Using version ${{ needs.tag.outputs.apiVersion }}"
           sed -i  "s#version\":\ \"\(.*\)\",#version\":\ \"${{ needs.tag.outputs.apiVersion }}\",#g" package.json
+          find packages/* -maxdepth 1 -name "package.json" | xargs -I {} sed -i "s#version\":\ \"\(.*\)\",#version\":\ \"${{ needs.tag.outputs.apiVersion }}\",#g" {}
+
           pnpm publish --recursive --provenance --tag latest --no-git-checks --access public

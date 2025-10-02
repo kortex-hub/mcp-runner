@@ -82,8 +82,6 @@ jobs:
           echo "📢 Pull request created: ${pullRequestUrl}"
           echo "➡️ Flag the PR as being ready for review"
           gh pr ready "${pullRequestUrl}"
-          echo "🔅 Mark the PR as being ok to be merged automatically"
-          gh pr merge "${pullRequestUrl}" --auto --rebase
         env:
           GITHUB_TOKEN: ${{ secrets.KORTEX_BOT_TOKEN }}
 

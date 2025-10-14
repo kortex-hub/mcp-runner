@@ -23,7 +23,7 @@
     "vitest": "^3.0.9",
     "vite-plugin-dts": "^4.5.4",
     "@kortex-hub/mcp-registry-types": "^1.2.3",
-    "ai": "^5.0.59"
+    "ai": "^5.0.70"
   },
   "files": [
     "dist"
